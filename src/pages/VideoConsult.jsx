@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
+import AppointmentBooking from '../components/AppointmentBooking';
 
-function VideoConsult() {
+const VideoConsult = () => {
+  const [showAppointment, setShowAppointment] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -50,24 +52,32 @@ function VideoConsult() {
     };
   }, []);
 
-  const toggleAudio = () => {
-    apiRef.current.executeCommand('toggleAudio');
-  };
-
-  const toggleVideo = () => {
-    apiRef.current.executeCommand('toggleVideo');
-  };
-
-  const endCall = () => {
-    apiRef.current.executeCommand('hangup');
-    window.history.back();
+  const handleAppointmentComplete = () => {
+    setShowAppointment(false);
   };
 
   return (
-    <div className="w-full">
-      <div className="bg-gray-900 rounded-xl aspect-video relative overflow-hidden" ref={jitsiRef} />
+    <div className="relative min-h-screen">
+      {/* Video container */}
+      <div className="w-full h-screen">
+        <div className="bg-gray-900 w-full h-full" ref={jitsiRef} />
+      </div>
+
+      {/* Overlay */}
+      {showAppointment && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h1 className="text-3xl font-bold text-gray-800 mb-6">
+                Book Video Consultation
+              </h1>
+              <AppointmentBooking onComplete={handleAppointmentComplete} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default VideoConsult;

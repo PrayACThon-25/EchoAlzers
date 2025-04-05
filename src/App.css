@@ -42,6 +42,21 @@
   @apply w-full px-5 py-3 rounded-xl border bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
 }
 
+/* Form Styles */
+.input-field {
+  @apply w-full px-4 py-3 rounded-xl border-gray-200 bg-white/50 backdrop-blur-sm 
+  focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm
+  placeholder:text-gray-400 transition-all duration-200;
+}
+
+.form-group {
+  @apply relative;
+}
+
+.form-group label {
+  @apply text-gray-700 font-medium;
+}
+
 /* Navigation */
 .nav-item {
   @apply px-4 py-2.5 rounded-xl transition-all duration-200 font-medium;
