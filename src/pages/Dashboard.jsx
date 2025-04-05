@@ -10,6 +10,9 @@ function Dashboard() {
   const [motivationalMessage, setMotivationalMessage] = useState('');
   const [moodFeedback, setMoodFeedback] = useState('');
   const [activities, setActivities] = useState([]);
+  const [completedActivities, setCompletedActivities] = useState(new Set());
+  const [dietRecommendations, setDietRecommendations] = useState([]);
+  const [isDietLoading, setIsDietLoading] = useState(false);
 
   const moodMessages = {
     '😊': "That's wonderful! Keep up that positive energy!",
@@ -46,6 +49,7 @@ function Dashboard() {
         const medications = profile.medications.split('\n').filter(med => med.trim());
         medications.forEach((med, index) => {
           schedule.push({
+            id: `med-${index}`,
             time: `${8 + index}:00 AM`,
             task: `Take ${med.split('|')[0].trim()}`,
             type: 'medication'
@@ -55,10 +59,11 @@ function Dashboard() {
 
       // Add upcoming appointments if they exist
       if (profile?.appointments) {
-        profile.appointments.forEach(apt => {
+        profile.appointments.forEach((apt, index) => {
           const aptDate = new Date(apt.date);
           if (aptDate.toDateString() === today.toDateString()) {
             schedule.push({
+              id: `apt-${index}`,
               time: apt.time,
               task: apt.description || 'Medical Appointment',
               type: 'appointment'
@@ -87,6 +92,62 @@ function Dashboard() {
       mood,
       timestamp: new Date().toISOString(),
     });
+  };
+
+  const toggleActivityCompletion = (activityId) => {
+    setCompletedActivities(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(activityId)) {
+        newSet.delete(activityId);
+      } else {
+        newSet.add(activityId);
+      }
+      return newSet;
+    });
+  };
+
+  const getDietRecommendations = async () => {
+    setIsDietLoading(true);
+    try {
+      const healthContext = `Health: ${profile?.conditions || 'None'}. Allergies: ${profile?.allergies || 'None'}`;
+
+      const prompt = `List 5 traditional Tamil Nadu dishes that are safe for someone with ${healthContext}. Only provide foods that are suitable for a person recovering from the condition.
+        DO NOT include any dish that could potentially worsen their condition.
+        Output format: Just the dish names, one per line, nothing else.
+        Example:
+        Keerai Poriyal
+        Ragi Kanji`;
+
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyD7x2iHKovPb_SHcI6i5kHVs6uLvRl-Bsk",
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            }
+          })
+        }
+      );
+
+      const data = await response.json();
+      const recommendations = data.candidates[0].content.parts[0].text
+        .split('\n')
+        .filter(line => line.trim())
+        .map(line => line.trim());
+
+      setDietRecommendations(recommendations);
+    } catch (error) {
+      console.error('Failed to get diet recommendations:', error);
+      setDietRecommendations(['Unable to load recommendations. Please try again.']);
+    } finally {
+      setIsDietLoading(false);
+    }
   };
 
   const metrics = [
@@ -152,20 +213,63 @@ function Dashboard() {
           </div>
 
           <div className="card">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="section-title mb-0">Recommended Foods</h3>
+              <button
+                onClick={getDietRecommendations}
+                className="btn btn-outline"
+                disabled={isDietLoading}
+              >
+                {isDietLoading ? 'Loading...' : 'Get Foods'}
+              </button>
+            </div>
+            <div className="grid gap-3">
+              {dietRecommendations.map((food, index) => (
+                <div 
+                  key={index} 
+                  className="p-3 bg-gray-50 rounded-lg flex items-center gap-3"
+                >
+                  <span className="text-lg">🍽️</span>
+                  <p className="text-gray-800 font-medium">{food}</p>
+                </div>
+              ))}
+              {dietRecommendations.length === 0 && (
+                <p className="text-center text-gray-500 py-4">
+                  Click to get personalized food recommendations
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
             <h3 className="section-title">Today's Schedule</h3>
             <div className="divide-y">
               {activities.length > 0 ? (
-                activities.map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between py-3">
+                activities.map((activity) => (
+                  <div 
+                    key={activity.id} 
+                    className={`flex items-center justify-between py-3 ${
+                      completedActivities.has(activity.id) ? 'opacity-50' : ''
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${
                         activity.type === 'medication' ? 'bg-primary' : 'bg-secondary'
                       }`}></div>
                       <span className="text-gray-600">{activity.time}</span>
-                      <span className="font-medium">{activity.task}</span>
+                      <span className={`font-medium ${
+                        completedActivities.has(activity.id) ? 'line-through' : ''
+                      }`}>{activity.task}</span>
                     </div>
-                    <button className="text-sm text-primary hover:text-primary-dark">
-                      Complete
+                    <button 
+                      onClick={() => toggleActivityCompletion(activity.id)}
+                      className={`text-sm px-3 py-1 rounded-lg transition-colors ${
+                        completedActivities.has(activity.id)
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'text-primary hover:text-primary-dark'
+                      }`}
+                    >
+                      {completedActivities.has(activity.id) ? 'Completed' : 'Complete'}
                     </button>
                   </div>
                 ))
