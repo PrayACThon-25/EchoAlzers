@@ -1,9 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import { useUser } from '../context/UserContext';
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { profile, logout } = useUser();
 
   const isActive = (path) => location.pathname === path;
 
@@ -45,6 +47,18 @@ function Navbar() {
             ))}
           </div>
 
+          {/* User profile and logout button */}
+          {profile && (
+            <div className="hidden md:flex items-center">
+              <button
+                onClick={logout}
+                className="btn btn-secondary"
+              >
+                Logout
+              </button>
+            </div>
+          )}
+
           {/* Mobile menu button */}
           <button onClick={() => setIsOpen(!isOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-50">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,6 +85,16 @@ function Navbar() {
                 {label}
               </Link>
             ))}
+            {profile && (
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={logout}
+                  className="btn btn-secondary"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

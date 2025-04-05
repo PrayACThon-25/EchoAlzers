@@ -1,40 +1,41 @@
 import { useState, useEffect } from 'react';
+import { useUser } from '../context/UserContext';
 
 function Treatment() {
-  const [treatments, setTreatments] = useState([
-    {
-      id: 1,
-      name: 'Physical Therapy',
-      schedule: 'Mon, Wed, Fri',
-      progress: '8/12',
-      completed: 8,
-      total: 12,
-      isExpanded: false,
-      times: ['09:00', '16:00'],
-      reminderEnabled: true,
-      recurrence: {
-        type: 'until', // 'until' or 'for'
-        endDate: '2024-03-01',
-        duration: null, // number of days if type is 'for'
-      }
-    },
-    {
-      id: 2,
-      name: 'Medication Routine',
-      schedule: 'Daily',
-      progress: '28/30',
-      completed: 28,
-      total: 30,
-      isExpanded: false,
-      times: ['08:00', '14:00', '20:00'],
-      reminderEnabled: true,
-      recurrence: {
-        type: 'for',
-        endDate: null,
-        duration: 30
-      }
+  const { profile } = useUser();
+  const [treatments, setTreatments] = useState([]);
+
+  useEffect(() => {
+    if (profile?.medications) {
+      // Convert profile medications to treatment format
+      const medicationsList = profile.medications
+        .split('\n')
+        .filter(med => med.trim())
+        .map((med, index) => ({
+          id: `prescription-${index}`,
+          name: med.trim(),
+          schedule: 'Daily',
+          progress: '0/30',
+          completed: 0,
+          total: 30,
+          isExpanded: false,
+          times: ['09:00'],
+          reminderEnabled: true,
+          recurrence: {
+            type: 'until',
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            duration: 30
+          },
+          isPrescription: true
+        }));
+
+      setTreatments(prev => {
+        // Filter out old prescriptions and add new ones
+        const nonPrescriptions = prev.filter(t => !t.isPrescription);
+        return [...nonPrescriptions, ...medicationsList];
+      });
     }
-  ]);
+  }, [profile]);
 
   const [newTreatment, setNewTreatment] = useState({
     name: '',
@@ -186,11 +187,14 @@ function Treatment() {
 
       <div className="grid gap-4">
         {treatments.map((treatment) => (
-          <div key={treatment.id} className="card">
+          <div key={treatment.id} className={`card ${treatment.isPrescription ? 'border-l-4 border-l-primary' : ''}`}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-1">
                   {treatment.name}
+                  {treatment.isPrescription && (
+                    <span className="ml-2 text-sm text-primary">(Prescribed)</span>
+                  )}
                 </h3>
                 <p className="text-gray-600">Schedule: {treatment.schedule}</p>
               </div>

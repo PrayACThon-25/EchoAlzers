@@ -1,15 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHealth } from '../context/HealthContext';
+import { useUser } from '../context/UserContext';
 
 function Dashboard() {
   const { moodData, fitnessSyncData, syncWithGoogleFit } = useHealth();
+  const { profile } = useUser();
   const [activeMetric, setActiveMetric] = useState(null);
+  const [motivationalMessage, setMotivationalMessage] = useState('');
+
+  useEffect(() => {
+    if (profile?.conditions) {
+      const conditions = profile.conditions.toLowerCase();
+      let message = '';
+      
+      if (conditions.includes('diabetes')) {
+        message = "Remember, managing diabetes is a journey of small victories. Every healthy choice counts!";
+      } else if (conditions.includes('heart')) {
+        message = "Your heart gets stronger with every step. Keep up with your cardiac care routine!";
+      } else if (conditions.includes('arthritis')) {
+        message = "gentle movement is progress. You're building strength every day!";
+      } else {
+        message = "Every day is a step toward better health. You're doing great!";
+      }
+      
+      setMotivationalMessage(message);
+    }
+  }, [profile]);
 
   const metrics = [
     { 
       label: 'Recovery Progress',
       value: '75%',
-      detail: 'On track with physical therapy goals',
+      detail: `Stay strong, ${profile?.name}! Your dedication to recovery is showing results`,
       color: 'bg-green-500'
     },
     {
@@ -36,8 +58,8 @@ function Dashboard() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b">
         <div className="mb-4 sm:mb-0">
-          <h2 className="section-title">Your Recovery Dashboard</h2>
-          <p className="text-gray-500">Track your progress and daily activities</p>
+          <h2 className="section-title">Welcome back, {profile?.name}</h2>
+          <p className="text-gray-500">Your personal health dashboard</p>
         </div>
         <button 
           onClick={() => window.location.reload()}
@@ -45,6 +67,13 @@ function Dashboard() {
         >
           <span>↻</span> Refresh
         </button>
+      </div>
+
+      {/* Motivational Message */}
+      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 p-6 rounded-xl">
+        <p className="text-lg font-medium text-gray-800">
+          {motivationalMessage}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
