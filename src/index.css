@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-light: #60a5fa;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --secondary-light: #818cf8;
+  --secondary: #6366f1;
+  --secondary-dark: #4f46e5;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-800: #1f2937;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-800 m-0 min-h-screen;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  /* Better Typography */
+  h1 { @apply text-4xl font-bold mb-6; }
+  h2 { @apply text-3xl font-bold mb-4; }
+  h3 { @apply text-2xl font-semibold mb-3; }
+  p { @apply leading-relaxed mb-4; }
+}
+
+@layer components {
+  .page-container {
+    @apply max-w-7xl mx-auto px-4 w-full;
+  }
+
+  /* Card Styles */
+  .card {
+    @apply bg-white/80 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 p-6;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text;
+  }
+
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  /* Button Styles */
+  .btn {
+    @apply px-5 py-2.5 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 focus:scale-95;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-secondary text-white shadow-md shadow-primary/20 hover:shadow-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+  }
+
+  .btn-outline {
+    @apply border-2 border-primary text-primary hover:bg-primary hover:text-white;
+  }
+
+  /* Input Styles */
+  .input {
+    @apply w-full px-5 py-3 rounded-xl border bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none;
+  }
+
+  /* Container */
+  .container {
+    @apply px-4 mx-auto max-w-7xl;
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply px-3 py-2 rounded-md transition-colors;
+  }
+
+  .nav-link-active {
+    @apply bg-primary text-white;
+  }
+
+  /* Grid Layouts */
+  .grid-cards {
+    @apply grid gap-6 sm:grid-cols-2 lg:grid-cols-3;
+  }
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300/50 rounded-full backdrop-blur-sm hover:bg-gray-400/50;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+
+  h1 { @apply text-3xl; }
+  h2 { @apply text-2xl; }
+  h3 { @apply text-xl; }
+}
