@@ -4,6 +4,7 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -11,14 +12,53 @@ function Chat() {
     const newMessage = { text: input, sender: 'user' };
     setMessages(prev => [...prev, newMessage]);
     setInput('');
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyD7x2iHKovPb_SHcI6i5kHVs6uLvRl-Bsk",
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: input }] }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('AI API request failed');
+      }
+
+      const data = await response.json();
+      const aiResponse = data.candidates[0]?.content?.parts[0]?.text || "Sorry, I couldn't process that.";
+
       setMessages(prev => [...prev, {
-        text: "I understand your concern. Here's what you should do...",
+        text: aiResponse,
         sender: 'assistant'
       }]);
-    }, 1000);
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages(prev => [...prev, {
+        text: "Sorry, there was an error processing your request.",
+        sender: 'assistant'
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   const toggleVoice = () => {
@@ -45,6 +85,13 @@ function Chat() {
               </div>
             </div>
           ))}
+          {isLoading && (
+            <div className="flex justify-start fade-in">
+              <div className="bg-gray-100 text-gray-800 rounded-xl px-4 py-2">
+                Thinking...
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="border-t p-4 flex gap-2 items-center">
@@ -60,6 +107,7 @@ function Chat() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyPress}
             className="input flex-1"
             placeholder="Type your question..."
           />
