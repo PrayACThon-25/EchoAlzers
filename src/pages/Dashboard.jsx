@@ -3,10 +3,18 @@ import { useHealth } from '../context/HealthContext';
 import { useUser } from '../context/UserContext';
 
 function Dashboard() {
-  const { moodData, fitnessSyncData, syncWithGoogleFit } = useHealth();
+  const { moodData, fitnessSyncData, syncWithGoogleFit, updateMoodData } = useHealth();
   const { profile } = useUser();
   const [activeMetric, setActiveMetric] = useState(null);
+  const [currentMood, setCurrentMood] = useState(null);
   const [motivationalMessage, setMotivationalMessage] = useState('');
+  const [moodFeedback, setMoodFeedback] = useState('');
+
+  const moodMessages = {
+    '😊': "That's wonderful! Keep up that positive energy!",
+    '😐': "It's okay to have neutral days. Take care of yourself.",
+    '😢': "I hear you. Remember it's okay to not be okay. Consider talking to someone you trust."
+  };
 
   useEffect(() => {
     if (profile?.conditions) {
@@ -26,6 +34,15 @@ function Dashboard() {
       setMotivationalMessage(message);
     }
   }, [profile]);
+
+  const updateMood = (mood) => {
+    setCurrentMood(mood);
+    setMoodFeedback(moodMessages[mood]);
+    updateMoodData({
+      mood,
+      timestamp: new Date().toISOString(),
+    });
+  };
 
   const metrics = [
     { 
@@ -117,17 +134,42 @@ function Dashboard() {
         <div className="space-y-6">
           <div className="card">
             <h3 className="section-title">How are you feeling?</h3>
-            <div className="flex justify-around">
+            <div className="flex justify-around mb-4">
               {['😊', '😐', '😢'].map(emoji => (
                 <button
                   key={emoji}
                   onClick={() => updateMood(emoji)}
-                  className="text-3xl p-3 hover:bg-gray-50 rounded-xl transition-colors"
+                  className={`text-3xl p-3 rounded-xl transition-all duration-300 transform ${
+                    currentMood === emoji 
+                      ? 'bg-primary/10 scale-110 ring-2 ring-primary/20' 
+                      : 'hover:bg-gray-50 hover:scale-105'
+                  }`}
                 >
                   {emoji}
                 </button>
               ))}
             </div>
+            
+            {moodFeedback && (
+              <div className="text-center py-3 px-4 bg-gray-50 rounded-lg animate-fade-in">
+                <p className="text-gray-700">{moodFeedback}</p>
+              </div>
+            )}
+
+            {moodData && moodData.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-gray-500">Your last mood:</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{moodData[moodData.length - 1].mood}</span>
+                  <span className="text-sm text-gray-500">
+                    {new Date(moodData[moodData.length - 1].timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card">
