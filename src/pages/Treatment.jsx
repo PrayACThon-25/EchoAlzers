@@ -11,23 +11,47 @@ function Treatment() {
       const medicationsList = profile.medications
         .split('\n')
         .filter(med => med.trim())
-        .map((med, index) => ({
-          id: `prescription-${index}`,
-          name: med.trim(),
-          schedule: 'Daily',
-          progress: '0/30',
-          completed: 0,
-          total: 30,
-          isExpanded: false,
-          times: ['09:00'],
-          reminderEnabled: true,
-          recurrence: {
-            type: 'until',
-            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            duration: 30
-          },
-          isPrescription: true
-        }));
+        .map((med, index) => {
+          const [name, duration] = med.trim().split('|');
+          const defaultDuration = 30;
+          
+          let recurrence = {
+            type: 'for',
+            duration: defaultDuration,
+            endDate: new Date(Date.now() + defaultDuration * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          };
+
+          if (duration) {
+            if (duration.includes('-')) {
+              recurrence = {
+                type: 'until',
+                endDate: duration,
+                duration: Math.ceil((new Date(duration) - new Date()) / (1000 * 60 * 60 * 24))
+              };
+            } else {
+              const days = parseInt(duration);
+              recurrence = {
+                type: 'for',
+                duration: days,
+                endDate: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+              };
+            }
+          }
+
+          return {
+            id: `prescription-${index}`,
+            name: name.trim(),
+            schedule: 'Daily',
+            progress: '0/30',
+            completed: 0,
+            total: 30,
+            isExpanded: false,
+            times: ['09:00'],
+            reminderEnabled: true,
+            recurrence,
+            isPrescription: true
+          };
+        });
 
       setTreatments(prev => {
         // Filter out old prescriptions and add new ones
@@ -61,6 +85,9 @@ function Treatment() {
     treatment: null,
     time: null
   });
+
+  const [editingDuration, setEditingDuration] = useState(null);
+  const [editableTreatment, setEditableTreatment] = useState(null);
 
   useEffect(() => {
     // Request notification permission
@@ -173,6 +200,69 @@ function Treatment() {
     setDeleteConfirm({ show: false, treatmentId: null });
   };
 
+  const startEditingDuration = (treatment) => {
+    const currentRecurrence = {
+      type: treatment.recurrence?.type || 'for',
+      duration: treatment.recurrence?.duration || 30,
+      endDate: treatment.recurrence?.endDate || new Date().toISOString().split('T')[0]
+    };
+    
+    setEditableTreatment({
+      ...treatment,
+      recurrence: currentRecurrence
+    });
+    setEditingDuration(treatment.id);
+  };
+
+  const cancelEditingDuration = () => {
+    setEditingDuration(null);
+    setEditableTreatment(null);
+  };
+
+  const updateTreatmentDuration = (treatmentId, updatedRecurrence) => {
+    try {
+      // Calculate the new duration and end date
+      let newDuration, newEndDate;
+      
+      if (updatedRecurrence.type === 'for') {
+        newDuration = parseInt(updatedRecurrence.duration);
+        if (isNaN(newDuration) || newDuration < 1) {
+          throw new Error('Please enter a valid duration');
+        }
+        newEndDate = new Date(Date.now() + newDuration * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      } else {
+        newEndDate = updatedRecurrence.endDate;
+        newDuration = Math.ceil((new Date(newEndDate) - new Date()) / (1000 * 60 * 60 * 24));
+        if (newDuration < 1) {
+          throw new Error('End date must be in the future');
+        }
+      }
+
+      // Update the treatment
+      setTreatments(treatments.map(t => {
+        if (t.id === treatmentId) {
+          return {
+            ...t,
+            total: newDuration,
+            progress: `${t.completed}/${newDuration}`,
+            recurrence: {
+              type: updatedRecurrence.type,
+              duration: newDuration,
+              endDate: newEndDate
+            }
+          };
+        }
+        return t;
+      }));
+
+      // Reset editing state
+      setEditingDuration(null);
+      setEditableTreatment(null);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center pb-6 border-b">
@@ -231,14 +321,95 @@ function Treatment() {
                 </div>
                 <div className="mt-4 pt-4 border-t">
                   <div className="mb-4">
-                    <h4 className="font-medium mb-2">Treatment Duration:</h4>
-                    <p className="text-gray-600">
-                      {treatment.recurrence?.type === 'until' 
-                        ? `Until ${new Date(treatment.recurrence.endDate).toLocaleDateString()}`
-                        : treatment.recurrence?.duration
-                        ? `For ${treatment.recurrence.duration} days`
-                        : 'No duration set'}
-                    </p>
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-medium">Treatment Duration:</h4>
+                      <button
+                        onClick={() => editingDuration === treatment.id ? cancelEditingDuration() : startEditingDuration(treatment)}
+                        className="text-primary text-sm hover:text-primary-dark"
+                      >
+                        {editingDuration === treatment.id ? 'Cancel' : 'Edit'}
+                      </button>
+                    </div>
+                    {editingDuration === treatment.id && editableTreatment ? (
+                      <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
+                        <select
+                          value={editableTreatment.recurrence.type}
+                          onChange={(e) => {
+                            const type = e.target.value;
+                            setEditableTreatment(prev => ({
+                              ...prev,
+                              recurrence: {
+                                type,
+                                duration: 30,
+                                endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                              }
+                            }));
+                          }}
+                          className="w-full border rounded px-3 py-2 mb-2"
+                        >
+                          <option value="for">For Duration</option>
+                          <option value="until">Until Date</option>
+                        </select>
+
+                        {editableTreatment.recurrence.type === 'until' ? (
+                          <div className="flex gap-2">
+                            <input 
+                              type="date"
+                              value={editableTreatment.recurrence.endDate}
+                              min={new Date().toISOString().split('T')[0]}
+                              onChange={(e) => {
+                                const endDate = e.target.value;
+                                setEditableTreatment(prev => ({
+                                  ...prev,
+                                  recurrence: {
+                                    ...prev.recurrence,
+                                    endDate
+                                  }
+                                }));
+                              }}
+                              className="w-full border rounded px-3 py-2"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              value={editableTreatment.recurrence.duration}
+                              min="1"
+                              onChange={(e) => {
+                                const duration = parseInt(e.target.value) || 1;
+                                setEditableTreatment(prev => ({
+                                  ...prev,
+                                  recurrence: {
+                                    ...prev.recurrence,
+                                    duration
+                                  }
+                                }));
+                              }}
+                              className="w-full border rounded px-3 py-2"
+                            />
+                            <span className="text-gray-600">days</span>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-end mt-2">
+                          <button 
+                            onClick={() => updateTreatmentDuration(treatment.id, editableTreatment.recurrence)}
+                            className="btn btn-primary"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <p className="text-gray-600">
+                          {treatment.recurrence?.type === 'until' 
+                            ? `Until ${new Date(treatment.recurrence.endDate).toLocaleDateString()}`
+                            : `For ${treatment.recurrence.duration} days`}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div className="mb-4">
                     <h4 className="font-medium mb-2">Medication Times:</h4>
