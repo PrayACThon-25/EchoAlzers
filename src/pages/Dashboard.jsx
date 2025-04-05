@@ -9,6 +9,7 @@ function Dashboard() {
   const [currentMood, setCurrentMood] = useState(null);
   const [motivationalMessage, setMotivationalMessage] = useState('');
   const [moodFeedback, setMoodFeedback] = useState('');
+  const [activities, setActivities] = useState([]);
 
   const moodMessages = {
     '😊': "That's wonderful! Keep up that positive energy!",
@@ -33,6 +34,50 @@ function Dashboard() {
       
       setMotivationalMessage(message);
     }
+  }, [profile]);
+
+  useEffect(() => {
+    const generateDailySchedule = () => {
+      const schedule = [];
+      const today = new Date();
+
+      // Add medications from profile if they exist
+      if (profile?.medications) {
+        const medications = profile.medications.split('\n').filter(med => med.trim());
+        medications.forEach((med, index) => {
+          schedule.push({
+            time: `${8 + index}:00 AM`,
+            task: `Take ${med.split('|')[0].trim()}`,
+            type: 'medication'
+          });
+        });
+      }
+
+      // Add upcoming appointments if they exist
+      if (profile?.appointments) {
+        profile.appointments.forEach(apt => {
+          const aptDate = new Date(apt.date);
+          if (aptDate.toDateString() === today.toDateString()) {
+            schedule.push({
+              time: apt.time,
+              task: apt.description || 'Medical Appointment',
+              type: 'appointment'
+            });
+          }
+        });
+      }
+
+      // Sort activities by time
+      schedule.sort((a, b) => {
+        const timeA = new Date(`1970/01/01 ${a.time}`);
+        const timeB = new Date(`1970/01/01 ${b.time}`);
+        return timeA - timeB;
+      });
+
+      setActivities(schedule);
+    };
+
+    generateDailySchedule();
   }, [profile]);
 
   const updateMood = (mood) => {
@@ -63,12 +108,6 @@ function Dashboard() {
       detail: 'Next appointment: Tomorrow 10:00 AM',
       color: 'bg-purple-500'
     }
-  ];
-
-  const activities = [
-    { time: '8:00 AM', task: 'Morning Medication' },
-    { time: '9:30 AM', task: 'Physical Therapy Session' },
-    { time: '2:00 PM', task: 'Doctor\'s Appointment' },
   ];
 
   return (
@@ -115,23 +154,29 @@ function Dashboard() {
           <div className="card">
             <h3 className="section-title">Today's Schedule</h3>
             <div className="divide-y">
-              {activities.map((activity, index) => (
-                <div key={index} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-primary"></div>
-                    <span className="text-gray-600">{activity.time}</span>
-                    <span className="font-medium">{activity.task}</span>
+              {activities.length > 0 ? (
+                activities.map((activity, index) => (
+                  <div key={index} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        activity.type === 'medication' ? 'bg-primary' : 'bg-secondary'
+                      }`}></div>
+                      <span className="text-gray-600">{activity.time}</span>
+                      <span className="font-medium">{activity.task}</span>
+                    </div>
+                    <button className="text-sm text-primary hover:text-primary-dark">
+                      Complete
+                    </button>
                   </div>
-                  <button className="text-sm text-primary hover:text-primary-dark">
-                    Complete
-                  </button>
+                ))
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  No activities scheduled for today
                 </div>
-              ))}
+              )}
             </div>
           </div>
-        </div>
 
-        <div className="space-y-6">
           <div className="card">
             <h3 className="section-title">How are you feeling?</h3>
             <div className="flex justify-around mb-4">

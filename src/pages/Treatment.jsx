@@ -4,6 +4,7 @@ import { useUser } from '../context/UserContext';
 function Treatment() {
   const { profile } = useUser();
   const [treatments, setTreatments] = useState([]);
+  const [shownAlerts, setShownAlerts] = useState({});
 
   useEffect(() => {
     if (profile?.medications) {
@@ -95,19 +96,32 @@ function Treatment() {
       Notification.requestPermission();
     }
 
-    // Check medication times every minute
-    const interval = setInterval(() => {
+    const checkMedications = () => {
       const now = new Date();
       const currentTime = now.toLocaleTimeString('en-US', { 
         hour12: false,
         hour: '2-digit',
         minute: '2-digit'
       });
+      const today = now.toDateString();
 
       treatments.forEach(treatment => {
         if (treatment.reminderEnabled) {
           treatment.times.forEach(time => {
-            if (time === currentTime) {
+            const alertKey = `${treatment.id}-${time}-${today}`;
+            if (shownAlerts[alertKey]) return; // Skip if alert was already shown today
+
+            const timeDate = new Date(`1970/01/01 ${time}`);
+            const currentDate = new Date(`1970/01/01 ${currentTime}`);
+            const diffInSeconds = Math.abs((currentDate - timeDate) / 1000);
+
+            if (time === currentTime || diffInSeconds <= 30) {
+              // Mark this alert as shown
+              setShownAlerts(prev => ({
+                ...prev,
+                [alertKey]: true
+              }));
+
               setAlertDialog({
                 show: true,
                 treatment: treatment,
@@ -125,10 +139,16 @@ function Treatment() {
           });
         }
       });
-    }, 60000); // Check every minute
+    };
+
+    // Check immediately when component mounts or treatments change
+    checkMedications();
+
+    // Check every 10 seconds
+    const interval = setInterval(checkMedications, 10000);
 
     return () => clearInterval(interval);
-  }, [treatments]);
+  }, [treatments, shownAlerts]);
 
   const toggleExpand = (id) => {
     setTreatments(treatments.map(t => 
@@ -144,6 +164,7 @@ function Treatment() {
         progress: `${t.completed + 1}/${t.total}`
       } : t
     ));
+    setAlertDialog({ show: false, treatment: null, time: null });
   };
 
   const undoProgress = (id) => {
@@ -261,6 +282,10 @@ function Treatment() {
     } catch (error) {
       alert(error.message);
     }
+  };
+
+  const dismissAlert = () => {
+    setAlertDialog({ show: false, treatment: null, time: null });
   };
 
   return (
@@ -564,16 +589,13 @@ function Treatment() {
             </p>
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => {
-                  markProgress(alertDialog.treatment?.id);
-                  setAlertDialog({ show: false, treatment: null, time: null });
-                }}
+                onClick={() => markProgress(alertDialog.treatment?.id)}
                 className="btn btn-primary"
               >
                 Mark as Taken
               </button>
               <button
-                onClick={() => setAlertDialog({ show: false, treatment: null, time: null })}
+                onClick={dismissAlert}
                 className="btn btn-secondary"
               >
                 Dismiss
